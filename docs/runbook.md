@@ -80,3 +80,101 @@ Expected results:
 docker stop notes-api
 docker rm notes-api
 ```
+
+## Docker Compose / Упражнение 4
+
+### Configuration / Конфигурация
+
+The application uses three services:
+- `api` — FastAPI application on port 8000.
+- `db` — PostgreSQL 16 database on port 5432.
+- `adminer` — database administration interface on port 8080.
+
+Create a local environment file:
+
+```bash
+cp .env.example .env
+```
+
+The `.env` file contains local configuration and is excluded from Git. The `.env.example` file provides example values.
+
+### Start services / Стартиране
+
+```bash
+docker compose up -d --build
+```
+
+### Check services / Проверка
+
+```bash
+docker compose ps
+curl http://localhost:8000/health
+curl http://localhost:8000/ready
+curl http://localhost:8000/version
+```
+
+The API and database should report `healthy`. The `/ready` endpoint should return `{"status":"ready"}`, and `/version` should return `{"version":"0.4.0"}`.
+
+### Database / База данни
+
+The API connects to PostgreSQL using the hostname `db`, which Docker Compose resolves through its internal network.
+
+To view stored notes:
+
+```bash
+docker compose exec db psql -U notes -d notes -c "SELECT * FROM notes;"
+```
+
+### Adminer
+
+Open port `8080` in the browser.
+
+Connection settings:
+- System: PostgreSQL
+- Server: `db`
+- Username: `notes`
+- Password: value of `POSTGRES_PASSWORD` in `.env`
+- Database: `notes`
+
+### Data persistence / Запазване на данните
+
+PostgreSQL stores its data in the named volume `postgres_data`.
+
+```bash
+docker compose down
+docker compose up -d
+```
+
+The stored notes remain available after restarting the services.
+
+**Warning:** `docker compose down -v` also removes the database volume and its stored data.
+
+### Troubleshooting / Отстраняване на проблеми
+
+Check service status:
+
+```bash
+docker compose ps
+```
+
+Check logs:
+
+```bash
+docker compose logs --tail=50 api
+docker compose logs --tail=50 db
+docker compose logs --tail=50 adminer
+```
+
+Validate configuration:
+
+```bash
+docker compose config --quiet
+```
+
+If the API cannot connect to PostgreSQL, check `DATABASE_URL`, database credentials and the `db` healthcheck.
+
+### Stop services / Спиране
+
+```bash
+docker compose down
+```
